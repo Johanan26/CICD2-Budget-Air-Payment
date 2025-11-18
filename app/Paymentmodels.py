@@ -10,7 +10,7 @@ class Base(DeclarativeBase):
 
 class Payment(Base):
     __tablename__ = "payments"
-    id: Mapped[str] = mapped_column(String, primary_key=True, idex=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     amount: Mapped[Decimal] = mapped_column(Numeric(10,2), nullable=False)
     currency: Mapped[Currency] = mapped_column(SqlEnum(Currency), nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=True)

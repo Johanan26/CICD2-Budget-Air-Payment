@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app, get_db
-from app.Usermodels import Base
+from app.Paymentmodels import Base
 
 # Create engine (in-memory)
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
