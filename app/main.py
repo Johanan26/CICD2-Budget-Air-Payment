@@ -1,14 +1,15 @@
 # app/main.py
 from fastapi import FastAPI, Depends, HTTPException, status, Response
+from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
-from .Userdb import engine, SessionLocal
-from .Usermodels import Base, UserDB, PasswordHash
-from .UserSchema import User, UserPublic, generate_user_id
+from .Paymentdb import engine, SessionLocal
+from .Paymentmodels import Base, Payment, PaymentRefund
+from .Paymentschemas import PaymentStatus, PaymentProvider, Currency, PaymentBase,PaymentUpdateStatus,PaymentRefundCreate, Payment, PaymentCreate
 
-app = FastAPI()
+app = FastAPI(title="Payment Processor Microservice")
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,5 +26,65 @@ def commit_or_rollback(db: Session, error_msg: str):
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail=error_msg)
+    
+@app.post("/payments", response_model=Payment, status_code=status.HTTP_201_CREATED)
+def create_payment(
+    payload: PaymentCreate,
+    db: Session = Depends(get_db)
+):
 
+    db_payment = Payment(
+        amount=payload.amount,
+        currency= payload.currency,
+        description= payload.description,
+        user_id= payload.user_id,
+        order_id= payload.order_id,
+        provider= payload.provider,
+        provider_payment_id= payload.provider_payload_id,
+    )
 
+    db.add(db_payment)
+    db.commit()
+    db.refresh(db_payment)
+    return db_payment
+
+@app.get("/payment/{payment_id}", response_model=Payment,)
+def get_payment(payment_id: str, db: Session = Depends(get_db),):
+    #get single payment by id
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not found",)
+    return payment
+
+@app.get("/payments", response_model=List[Payment],)
+def list_payments(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    
+    payments = (
+        db.query(Payment)
+        .order_by(Payment.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return payments
+
+@app.patch("/payment/{payment_id}/status", response_model= Payment,)
+def update_payment_status(
+    payment_id: str,
+    payload: PaymentUpdateStatus,
+    db: Session = Depends(get_db),
+):
+    
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if not payment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found",)
+    payment.status = payload.status
+    payment.failure_reason = payload.failure_reason
+
+    db.commit()
+    db.refresh(payment)
+    return payment

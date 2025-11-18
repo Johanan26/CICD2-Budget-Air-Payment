@@ -1,10 +1,9 @@
 # app/schemas.py
-from typing import Annotated, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
-from annotated_types import Ge, Le
-from pydantic import BaseModel, EmailStr, StringConstraints, Field
+from pydantic import BaseModel, Field
 
 #Enum
 class PaymentStatus(str, Enum):
@@ -30,11 +29,13 @@ class PaymentBase(BaseModel):
     amount: Decimal = Field(..., gt=0, description="Amount to charge in major units") 
     current: Currency = Field(..., description="Currency of the payment")
     description: Optional[str] = Field(None, description="Human readable description")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Random data")
     user_id: Optional[str] = Field(None, description="ID of the user making the payment")
     order_id: Optional[str] = Field(None, description="ID of the related order in your system")
     provider: PaymentProvider = Field(default=PaymentProvider.INTERNAL)
     provider_payment_id: Optional[str] = Field(None, description="ID of payment in the PSP")
+
+class PaymentCreate(PaymentBase):
+    ...
 
 #Input models
 class PaymentUpdateStatus(BaseModel):
