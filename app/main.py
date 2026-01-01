@@ -1,4 +1,3 @@
-# app/main.py
 from fastapi import FastAPI, Depends, HTTPException, status, Response
 from typing import List
 from sqlalchemy.orm import Session
@@ -50,7 +49,6 @@ def create_payment(
 
 @app.get("/payment/{payment_id}", response_model=Payment,)
 def get_payment(payment_id: str, db: Session = Depends(get_db),):
-    #get single payment by id
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
     if not payment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="payment not found",)
