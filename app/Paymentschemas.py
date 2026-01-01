@@ -27,7 +27,7 @@ class Currency(str, Enum):
 
 class PaymentBase(BaseModel):
     amount: Decimal = Field(..., gt=0, description="Amount to charge in major units") 
-    current: Currency = Field(..., description="Currency of the payment")
+    currency: Currency = Field(..., description="Currency of the payment")
     description: Optional[str] = Field(None, description="Human readable description")
     user_id: Optional[str] = Field(None, description="ID of the user making the payment")
     order_id: Optional[str] = Field(None, description="ID of the related order in your system")

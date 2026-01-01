@@ -1,13 +1,17 @@
 import pytest
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app, get_db
+import app.main
+print("USING:", app.main.__file__)
+
+from app.main import app as fastapi_app, get_db
 from app.Paymentmodels import Base
 
-TEST_DB_URL = "sqlite+pysqlite:///:memory:"
-engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False})
+TEST_DB_URL = "sqlite+pysqlite://"
+engine = create_engine(TEST_DB_URL, connect_args={"check_same_thread": False}, poolclass = StaticPool,)
 TestingSessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 Base.metadata.create_all(bind=engine)
 
@@ -21,9 +25,8 @@ def override_get_db():
     finally:
         db.close()
 
-app.dependency_overrides[get_db] = override_get_db
-
-client = TestClient(app)
+fastapi_app.dependency_overrides[get_db] = override_get_db
+client = TestClient(fastapi_app)
 
 def test_create_payment():
     payload = {
@@ -32,7 +35,7 @@ def test_create_payment():
         "description" : "Test payment",
         "user_id" : "user1",
         "order_id" : "order1",
-        "provider" : "INTERNAL",
+        "provider" : "internal",
         "provider_payment_id" : "None"
     }
 
@@ -40,7 +43,7 @@ def test_create_payment():
     assert response.status_code == 201
 
     data= response.json()
-    assert data["amount"] == 12.50
+    assert data["amount"] == "12.50"
     assert data["currency"] == "EUR"
     assert data["status"] == "pending"
     assert "id" in data
@@ -52,16 +55,16 @@ def test_get_payment():
         "description" : "Fetch test",
         "user_id" : "",
         "order_id" : "",
-        "provider" : "INTERNAL",
+        "provider" : "internal",
         "provider_payment_id" : "None" 
     }).json()
 
-    response = client.get(f"/payments/{p['id']}")
+    response = client.get(f"/payment/{p['id']}")
     assert response.status_code == 200
 
     data = response.json()
     assert data["id"] == p["id"]
-    assert data["amount"] == 5.0
+    assert data["amount"] == "5.00"
 
 def test_update_payment_status():
     p = client.post("/payments", json={
@@ -70,11 +73,11 @@ def test_update_payment_status():
     "description" : "status test",
     "user_id" : "",
     "order_id" : "",
-    "provider" : "INTERNAL",
+    "provider" : "internal",
     "provider_payment_id" : "None" 
     }).json()
 
-    response = client.patch(f"/payments/{p['id']}/status",json={
+    response = client.patch(f"/payment/{p['id']}/status",json={
         "status": "success",
         "failure_reason": None
     })
@@ -87,6 +90,38 @@ def test_update_payment_status():
 def test_list_payment():
     response = client.get("/payments")
     assert response.status_code == 200
-    assert isinstance(response.json().list)
+    assert isinstance(response.json(),list)
     assert len(response.json()) >= 1
+
+def test_get_payment_404():
+    response = client.get("/payment/does-not-exist")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "payment not found"
+
+def test_update_payment_status_404():
+    response = client.patch('/payment/does-not-exist/status',json={"status": "success", "failure_reason":None})
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Payment not found"
+
+def test_list_payments_skip_limit():
+    for amt in ["1.00", "2.00", "3.00"]:
+        res = client.post("/payments", json={
+            "amount": amt,
+            "currency": "EUR",
+            "description": f"p{amt}",
+            "user_id": "user",
+            "order_id": "order",
+            "provider": "internal",
+            "provider_payment_id": "None"
+        })
+        assert res.status_code == 201
       
+    response = client.get("/payments?skip=0&limit=2")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) == 2
+    
+
+
+
