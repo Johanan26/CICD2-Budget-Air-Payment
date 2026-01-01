@@ -1,4 +1,3 @@
-# app/main.py
 from fastapi import FastAPI, Depends, HTTPException, status, Response
 from typing import List
 from sqlalchemy.orm import Session
