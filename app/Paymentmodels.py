@@ -16,10 +16,11 @@ class Payment(Base):
     description: Mapped[str] = mapped_column(String, nullable=True)
     user_id: Mapped[str] = mapped_column(String, index=True, nullable=True)
     order_id: Mapped[str]= mapped_column(String, index=True, nullable=True)
-    provider: Mapped[PaymentProvider] = mapped_column(SqlEnum(PaymentProvider), default= PaymentStatus.PENDING, nullable=False,)
+    provider: Mapped[PaymentProvider] = mapped_column(SqlEnum(PaymentProvider), default= PaymentProvider.INTERNAL, nullable=False,)
+    provider_payment_id: Mapped[str] =mapped_column(String, nullable=True,)
     failure_reason: Mapped[str] = mapped_column(String, nullable=True)
-
-    create_at:Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False,)
+    status: Mapped[PaymentStatus] = mapped_column(SqlEnum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False,)
+    created_at:Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False,)
     update_at:Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False,)
     refunds: Mapped[list["PaymentRefund"]] = relationship(back_populates="payment", cascade="all, delete-orphan",)
 
